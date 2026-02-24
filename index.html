@@ -1,4 +1,87 @@
-async function connect() {
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightgrave Console v9</title>
+    <style>
+        :root { --bg: #121212; --card: #1e1e1e; --primary: #00adb5; --accent: #f44336; --text: #eee; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; }
+        .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        h1 { color: var(--primary); text-align: center; margin: 5px 0; font-size: 1.4rem; }
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .status-item { background: #2a2a2a; padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #444; }
+        .status-item small { display: block; color: var(--primary); font-size: 0.65rem; text-transform: uppercase; }
+        .status-item span { font-size: 0.95rem; font-weight: bold; }
+        .slot-row { display: flex; align-items: center; justify-content: space-between; background: #252525; margin-top: 5px; padding: 5px 10px; border-radius: 8px; border-left: 3px solid var(--primary); }
+        .slot-row input { background: transparent; border: none; color: white; font-size: 0.9rem; width: 65px; text-align: center; border-bottom: 1px solid #444; outline: none; }
+        .btn { border: none; border-radius: 10px; padding: 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; color: white; transition: 0.2s; }
+        .btn-primary { background: var(--primary); }
+        .btn-danger { background: var(--accent); }
+        .btn-slot { width: auto; padding: 6px 12px; font-size: 0.75rem; margin: 0; background: #333; }
+        #terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; height: 100px; overflow-y: auto; font-size: 0.7rem; margin-top: 10px; border: 1px solid #333; }
+        input[type=range] { width: 100%; margin: 10px 0; accent-color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>Lightgrave Console</h1>
+        <button id="connectBtn" class="btn btn-primary" onclick="connect()">PŘIPOJIT BLE</button>
+    </div>
+
+    <div id="ui" style="display:none;">
+        <div class="card">
+            <div class="status-grid">
+                <div class="status-item" style="grid-column: span 2;"><small>Baterie</small><span id="valBat">--.- V</span></div>
+                <div class="status-item"><small>Datum RTC</small><span id="valDate">--.--.----</span></div>
+                <div class="status-item"><small>Čas RTC</small><span id="valTime">--:--</span></div>
+                <div class="status-item"><small>Okno 1</small><span id="valH1">--:--</span></div>
+                <div class="status-item"><small>Okno 2</small><span id="valH2">--:--</span></div>
+            </div>
+            <button class="btn" style="background:#444" onclick="send('?')">OBNOVIT STATUS</button>
+        </div>
+
+        <div class="card">
+            <small id="jasLabel" style="color:var(--primary)">MAXIMÁLNÍ JAS (EEPROM)</small>
+            <input type="range" id="bright" min="0" max="255" value="80" oninput="updateBright(this.value)">
+            <div style="text-align:center; font-weight:bold;">Hodnota: <span id="sv">80</span></div>
+            <button id="saveBrightBtn" class="btn btn-primary" onclick="send('J' + document.getElementById('bright').value)">ULOŽIT JAS</button>
+        </div>
+
+        <div class="card">
+            <small style="color:var(--primary)">SPECIÁLNÍ DNY (S0 - S4)</small>
+            <div id="slotEditor"></div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; gap: 10px;">
+                <button id="testBtn" class="btn btn-danger" style="margin-top:0; flex:1;" onclick="toggleTest()">TEST</button>
+                <button class="btn" style="background:#4caf50; margin-top:0; flex:1;" onclick="syncTime()">SYNC ČASU</button>
+            </div>
+            <button class="btn btn-danger" style="background:#666" onclick="disconnectAndOff()">UKONČIT A VYPNOUT BT</button>
+        </div>
+    </div>
+    <div id="terminal"></div>
+</div>
+
+<script>
+    let device, characteristic, isTest = false, buffer = "";
+    
+    // Generování slotů
+    const slotEditor = document.getElementById('slotEditor');
+    for(let i=0; i<5; i++) {
+        slotEditor.innerHTML += `
+            <div class="slot-row">
+                <span>Slot <b>S${i}</b>:</span>
+                <input type="text" id="s${i}_input" placeholder="13.08" value="--.--">
+                <button class="btn btn-slot" onclick="saveSlot(${i})">ULOŽIT</button>
+            </div>`;
+    }
+
+    async function connect() {
     try {
         renderLog("Hledám JDY-33...");
         
@@ -58,3 +141,119 @@ async function connect() {
         console.log(err);
     }
 }
+
+    // Funkce pro tahání jasu
+    function updateBright(val) {
+        document.getElementById('sv').innerText = val;
+        // Pokud běží TEST, posíláme rovnou číslo pro živou změnu
+        if (isTest) {
+            send(val); 
+        }
+    }
+
+    async function disconnectAndOff() {
+        if (confirm("Ukončit a vypnout Bluetooth na hrobě?")) {
+            if (isTest) await send('testok');
+            await send('X');
+            setTimeout(() => { location.reload(); }, 600);
+        }
+    }
+
+    function parseData(l) {
+        if (!l) return;
+
+        // Detekce ukončení testu Arduinem (timeout 60s)
+        if (l.includes("testok") || l.includes("TEST UKONCEN")) {
+            isTest = false;
+            updateTestUI();
+            renderLog("Test ukončen (vypršel čas)");
+        }
+
+        if (l.includes("Baterie:")) { 
+            let m = l.match(/[\d.]+/); 
+            if(m) document.getElementById('valBat').innerText = m[0] + " V";
+        }
+        if (l.includes("RTC:")) { 
+            let dMatch = l.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
+            if(dMatch) document.getElementById('valDate').innerText = dMatch[1];
+            let tMatch = l.match(/(\d{1,2}:\d{2})/);
+            if(tMatch) document.getElementById('valTime').innerText = tMatch[1];
+        }
+        if (l.includes("Okno 1")) {
+            let m = l.match(/(\d+-\d+)/);
+            if(m) document.getElementById('valH1').innerText = m[1];
+        }
+        if (l.includes("Okno 2")) {
+            let m = l.match(/(\d+-\d+)/);
+            if(m) document.getElementById('valH2').innerText = m[1];
+        }
+        let slotMatch = l.match(/S(\d):\s*([\d.-]+)\.([\d.-]+)/);
+        if (slotMatch) {
+            let idx = slotMatch[1];
+            let d = slotMatch[2];
+            let m = slotMatch[3];
+            let input = document.getElementById(`s${idx}_input`);
+            input.value = (d === "--" || d === "0" || d === "-1") ? "00.00" : d.padStart(2, '0') + "." + m.padStart(2, '0');
+        }
+    }
+
+    function updateTestUI() {
+        const btn = document.getElementById('testBtn');
+        const label = document.getElementById('jasLabel');
+        const saveBtn = document.getElementById('saveBrightBtn');
+
+        if (isTest) {
+            btn.innerText = "STOP TEST";
+            btn.style.background = "#555";
+            label.innerText = "ŽIVÝ JAS (TEST MÓD)";
+            label.style.color = "var(--accent)";
+            saveBtn.style.display = "none";
+        } else {
+            btn.innerText = "TEST";
+            btn.style.background = "var(--accent)";
+            label.innerText = "MAXIMÁLNÍ JAS (EEPROM)";
+            label.style.color = "var(--primary)";
+            saveBtn.style.display = "block";
+        }
+    }
+
+    function toggleTest() {
+        isTest = !isTest;
+        send(isTest ? 'test' : 'testok');
+        updateTestUI();
+    }
+
+    async function saveSlot(idx) {
+        let val = document.getElementById(`s${idx}_input`).value.trim();
+        let parts = val.split(/[.\s,]+/).filter(p => p.length > 0);
+        if (parts.length < 2) return;
+        let d = parts[0].padStart(2, '0');
+        let m = parts[1].padStart(2, '0');
+        await send(`S${idx} ${d} ${m}`);
+        setTimeout(() => send('?'), 1200);
+    }
+
+    async function send(msg) {
+        if (!characteristic) return;
+        let data = new TextEncoder().encode(msg + "\n");
+        try { await characteristic.writeValueWithResponse(data); } 
+        catch (e) { await characteristic.writeValueWithoutResponse(data); }
+    }
+
+    function renderLog(msg) {
+        let d = document.createElement('div');
+        d.innerText = "> " + msg;
+        let t = document.getElementById('terminal');
+        t.appendChild(d); t.scrollTop = t.scrollHeight;
+    }
+
+    function syncTime() {
+        const d = new Date();
+        const cmd = `T ${d.getFullYear()} ${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')} ${String(d.getMinutes()).padStart(2,'0')}`;
+        renderLog("Sync: " + cmd);
+        send(cmd);
+        setTimeout(() => send('?'), 1200);
+    }
+</script>
+</body>
+</html>
