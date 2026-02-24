@@ -82,36 +82,56 @@
     }
 
     async function connect() {
-        try {
-            device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: [0xFFE0, '0000ffe0-0000-1000-8000-00805f9b34fb']
-            });
-            const server = await device.gatt.connect();
-            const services = await server.getPrimaryServices();
-            let foundChar = null;
-            for (let s of services) {
-                const chars = await s.getCharacteristics();
-                for (let c of chars) { if (c.properties.notify || c.properties.indicate) { foundChar = c; break; } }
-                if (foundChar) break;
+    try {
+        // Bluefy na iOS vyžaduje konkrétní filtr, aby se otevřelo okno
+        device = await navigator.bluetooth.requestDevice({
+            filters: [
+                { services: [0xFFE0] }, 
+                { services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] },
+                { namePrefix: 'HM-' },
+                { namePrefix: 'BT' }
+            ],
+            optionalServices: [0xFFE0, '0000ffe0-0000-1000-8000-00805f9b34fb']
+        });
+
+        renderLog("Zařízení vybráno, připojuji...");
+        const server = await device.gatt.connect();
+        
+        // Hledání charakteristiky pro komunikaci
+        const service = await server.getPrimaryService(0xFFE0);
+        const characteristics = await service.getCharacteristics();
+        
+        // Najdeme tu, která umí notifikace (příjem dat)
+        characteristic = characteristics.find(c => c.properties.notify || c.properties.indicate);
+
+        if (!characteristic) {
+            throw new Error("Nepodařilo se najít komunikační kanál.");
+        }
+
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', (e) => {
+            let chunk = new TextDecoder().decode(e.target.value);
+            buffer += chunk;
+            if (buffer.includes('\n')) {
+                let lines = buffer.split('\n');
+                buffer = lines.pop();
+                lines.forEach(line => { parseData(line.trim()); renderLog(line.trim()); });
             }
-            characteristic = foundChar;
-            await characteristic.startNotifications();
-            characteristic.addEventListener('characteristicvaluechanged', (e) => {
-                let chunk = new TextDecoder().decode(e.target.value);
-                buffer += chunk;
-                if (buffer.includes('\n')) {
-                    let lines = buffer.split('\n');
-                    buffer = lines.pop();
-                    lines.forEach(line => { parseData(line.trim()); renderLog(line.trim()); });
-                }
-            });
-            document.getElementById('ui').style.display = 'block';
-            document.getElementById('connectBtn').innerText = "ODPOJIT";
-            document.getElementById('connectBtn').onclick = () => location.reload();
-            setTimeout(() => send('?'), 500);
-        } catch (err) { alert(err); }
+        });
+
+        document.getElementById('ui').style.display = 'block';
+        document.getElementById('connectBtn').innerText = "ODPOJIT";
+        document.getElementById('connectBtn').style.background = "#555";
+        document.getElementById('connectBtn').onclick = () => location.reload();
+        
+        renderLog("Připojeno!");
+        setTimeout(() => send('?'), 500);
+    } catch (err) { 
+        renderLog("Chyba: " + err);
+        // Pokud err není text, vypíšeme ho podrobněji
+        console.log(err);
     }
+}
 
     // Funkce pro tahání jasu
     function updateBright(val) {
