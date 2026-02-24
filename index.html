@@ -83,32 +83,39 @@
 
     async function connect() {
     try {
-        // Bluefy na iOS vyžaduje konkrétní filtr, aby se otevřelo okno
+        renderLog("Hledám zařízení...");
+        
+        // Maximálně zjednodušený požadavek, který iOS/Bluefy většinou akceptuje
         device = await navigator.bluetooth.requestDevice({
-            filters: [
-                { services: [0xFFE0] }, 
-                { services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] },
-                { namePrefix: 'HM-' },
-                { namePrefix: 'BT' }
-            ],
-            optionalServices: [0xFFE0, '0000ffe0-0000-1000-8000-00805f9b34fb']
+            acceptAllDevices: true,
+            optionalServices: [0xffe0, 0xffe1, '0000ffe0-0000-1000-8000-00805f9b34fb']
         });
 
-        renderLog("Zařízení vybráno, připojuji...");
+        renderLog("Připojuji se k: " + device.name);
         const server = await device.gatt.connect();
         
-        // Hledání charakteristiky pro komunikaci
-        const service = await server.getPrimaryService(0xFFE0);
-        const characteristics = await service.getCharacteristics();
+        renderLog("Hledám služby...");
+        const services = await server.getPrimaryServices();
         
-        // Najdeme tu, která umí notifikace (příjem dat)
-        characteristic = characteristics.find(c => c.properties.notify || c.properties.indicate);
-
-        if (!characteristic) {
-            throw new Error("Nepodařilo se najít komunikační kanál.");
+        let foundChar = null;
+        for (const service of services) {
+            const chars = await service.getCharacteristics();
+            for (const c of chars) {
+                // Hledáme jakoukoli charakteristiku, co umí psát a posílat data
+                if ((c.properties.notify || c.properties.indicate) && 
+                    (c.properties.write || c.properties.writeWithoutResponse)) {
+                    foundChar = c;
+                    break;
+                }
+            }
+            if (foundChar) break;
         }
 
+        if (!foundChar) throw new Error("Komunikační kanál nenalezen.");
+
+        characteristic = foundChar;
         await characteristic.startNotifications();
+        
         characteristic.addEventListener('characteristicvaluechanged', (e) => {
             let chunk = new TextDecoder().decode(e.target.value);
             buffer += chunk;
@@ -122,13 +129,13 @@
         document.getElementById('ui').style.display = 'block';
         document.getElementById('connectBtn').innerText = "ODPOJIT";
         document.getElementById('connectBtn').style.background = "#555";
-        document.getElementById('connectBtn').onclick = () => location.reload();
         
-        renderLog("Připojeno!");
+        renderLog("PŘIPOJENO!");
         setTimeout(() => send('?'), 500);
-    } catch (err) { 
-        renderLog("Chyba: " + err);
-        // Pokud err není text, vypíšeme ho podrobněji
+
+    } catch (err) {
+        // Tady je ta tvoje "2" - zkusíme z ní dostat víc informací
+        renderLog("CHYBA: " + (err.message || err));
         console.log(err);
     }
 }
