@@ -3,257 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lightgrave Console v9</title>
+    <title>Lightgrave Console v14</title>
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --primary: #00adb5; --accent: #f44336; --text: #eee; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 500px; }
-        .card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        h1 { color: var(--primary); text-align: center; margin: 5px 0; font-size: 1.4rem; }
-        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .status-item { background: #2a2a2a; padding: 8px; border-radius: 10px; text-align: center; border: 1px solid #444; }
-        .status-item small { display: block; color: var(--primary); font-size: 0.65rem; text-transform: uppercase; }
-        .status-item span { font-size: 0.95rem; font-weight: bold; }
-        .slot-row { display: flex; align-items: center; justify-content: space-between; background: #252525; margin-top: 5px; padding: 5px 10px; border-radius: 8px; border-left: 3px solid var(--primary); }
-        .slot-row input { background: transparent; border: none; color: white; font-size: 0.9rem; width: 65px; text-align: center; border-bottom: 1px solid #444; outline: none; }
-        .btn { border: none; border-radius: 10px; padding: 12px; font-size: 0.9rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; color: white; transition: 0.2s; }
-        .btn-primary { background: var(--primary); }
-        .btn-danger { background: var(--accent); }
-        .btn-slot { width: auto; padding: 6px 12px; font-size: 0.75rem; margin: 0; background: #333; }
-        #terminal { background: #000; color: #0f0; font-family: monospace; padding: 10px; height: 100px; overflow-y: auto; font-size: 0.7rem; margin-top: 10px; border: 1px solid #333; }
-        input[type=range] { width: 100%; margin: 10px 0; accent-color: var(--primary); }
+        :root { --primary: #00ff9d; --bg: #121212; --panel: #1e1e1e; --accent: #f44336; }
+        body { font-family: sans-serif; background: var(--bg); color: white; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: var(--panel); border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 15px; box-sizing: border-box; }
+        h2 { margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid #333; padding-bottom: 8px; text-transform: uppercase; }
+        
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .status-item { background: #252525; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #333; }
+        .status-label { font-size: 0.65rem; color: #888; text-transform: uppercase; }
+        .status-val { font-size: 0.95rem; font-weight: bold; }
+
+        .ctrl-row { margin-bottom: 15px; background: #252525; padding: 10px; border-radius: 10px; }
+        .ctrl-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .manual-in { background: #121212; border: 1px solid var(--primary); color: white; border-radius: 5px; width: 60px; text-align: center; padding: 5px; font-weight: bold; font-size: 1rem; }
+        input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; height: 25px; }
+
+        .time-row { display: flex; align-items: center; justify-content: space-around; margin-top: 10px; }
+        .time-unit { display: flex; flex-direction: column; align-items: center; }
+        .btn-r { width: 35px; height: 35px; border-radius: 50%; border: none; background: #444; color: white; font-size: 1.2rem; cursor: pointer; margin: 5px 0; }
+        .btn-r:active { background: var(--primary); color: black; }
+
+        .slot-row { display: flex; align-items: center; justify-content: space-between; background: #252525; margin-top: 6px; padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--primary); }
+        .slot-row input { background: transparent; border: none; color: white; font-size: 0.9rem; width: 70px; text-align: center; outline: none; border-bottom: 1px solid #444; }
+
+        .btn-main { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #log { font-family: monospace; font-size: 0.7rem; background: black; color: #0f0; padding: 10px; border-radius: 5px; height: 100px; overflow-y: auto; width: 100%; margin-top: 10px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
-        <h1>Lightgrave Console</h1>
-        <button id="connectBtn" class="btn btn-primary" onclick="connect()">PŘIPOJIT BLE</button>
-    </div>
+    <button id="connectBtn" class="btn-main" style="background:var(--primary); color:black;" onclick="connect()">PŘIPOJIT LIGHTGRAVE</button>
 
-    <div id="ui" style="display:none;">
+    <div id="ui" style="display:none; width: 100%; max-width: 450px;">
+        
         <div class="card">
+            <h2>Stav systému</h2>
             <div class="status-grid">
-                <div class="status-item" style="grid-column: span 2;"><small>Baterie</small><span id="valBat">--.- V</span></div>
-                <div class="status-item"><small>Datum RTC</small><span id="valDate">--.--.----</span></div>
-                <div class="status-item"><small>Čas RTC</small><span id="valTime">--:--</span></div>
-                <div class="status-item"><small>Okno 1</small><span id="valH1">--:--</span></div>
-                <div class="status-item"><small>Okno 2</small><span id="valH2">--:--</span></div>
+                <div class="status-item" style="grid-column: span 2;"><div class="status-label">Čas RTC</div><div id="val-rtc" class="status-val" style="color:var(--primary); font-size:1.2rem;">--:--</div></div>
+                <div class="status-item"><div class="status-label">Datum</div><div id="val-date" class="status-val">--.--.----</div></div>
+                <div class="status-item"><div class="status-label">Baterie</div><div id="val-bat" class="status-val">-- V</div></div>
+                <div class="status-item"><div class="status-label">Režim</div><div id="val-mode" class="status-val">--</div></div>
+                <div class="status-item"><div class="status-label">Senzory</div><div id="val-sens" class="status-val">--</div></div>
             </div>
-            <button class="btn" style="background:#444" onclick="send('?')">OBNOVIT STATUS</button>
+            <button class="btn-main" style="background:#4caf50; color:white;" onclick="syncTime()">SYNC ČASU Z MOBILU</button>
         </div>
 
         <div class="card">
-            <small id="jasLabel" style="color:var(--primary)">MAXIMÁLNÍ JAS (EEPROM)</small>
-            <input type="range" id="bright" min="0" max="255" value="80" oninput="updateBright(this.value)">
-            <div style="text-align:center; font-weight:bold;">Hodnota: <span id="sv">80</span></div>
-            <button id="saveBrightBtn" class="btn btn-primary" onclick="send('J' + document.getElementById('bright').value)">ULOŽIT JAS</button>
+            <h2>Časová okna</h2>
+            <div style="font-size:0.8rem; color:#888;">Okno 1 (Od - Do)</div>
+            <div class="time-row">
+                <div class="time-unit"><button class="btn-r" onclick="adj('h1s',1)">+</button><span id="h1s">17</span><button class="btn-r" onclick="adj('h1s',-1)">-</button></div>
+                <div class="time-unit"><button class="btn-r" onclick="adj('h1e',1)">+</button><span id="h1e">22</span><button class="btn-r" onclick="adj('h1e',-1)">-</button></div>
+            </div>
+            <div style="font-size:0.8rem; color:#888; margin-top:10px;">Okno 2 (Od - Do)</div>
+            <div class="time-row">
+                <div class="time-unit"><button class="btn-r" onclick="adj('h2s',1)">+</button><span id="h2s">0</span><button class="btn-r" onclick="adj('h2s',-1)">-</button></div>
+                <div class="time-unit"><button class="btn-r" onclick="adj('h2e',1)">+</button><span id="h2e">0</span><button class="btn-r" onclick="adj('h2e',-1)">-</button></div>
+            </div>
+            <button class="btn-main" style="background:#444; color:white;" onclick="saveWindows()">ULOŽIT OKNA</button>
         </div>
 
         <div class="card">
-            <small style="color:var(--primary)">SPECIÁLNÍ DNY (S0 - S4)</small>
+            <h2 id="jasLabel">LED Nastavení</h2>
+            <div class="ctrl-row">
+                <div class="ctrl-top"><span>Jas (0-255)</span><input type="number" id="num-j" class="manual-in" onchange="upd('J',this.value)"></div>
+                <input type="range" id="rng-j" min="0" max="255" oninput="upd('J',this.value)">
+            </div>
+            <div class="ctrl-row">
+                <div class="ctrl-top"><span>Trvání (s)</span><input type="number" id="num-d" class="manual-in" onchange="upd('D',this.value)"></div>
+                <input type="range" id="rng-d" min="1" max="300" oninput="upd('D',this.value)">
+            </div>
+            <div class="ctrl-row">
+                <div class="ctrl-top"><span>Fade IN (ms)</span><input type="number" id="num-fi" class="manual-in" onchange="upd('FI',this.value)"></div>
+                <input type="range" id="rng-fi" min="0" max="255" oninput="upd('FI',this.value)">
+            </div>
+            <div class="ctrl-row">
+                <div class="ctrl-top"><span>Fade OUT (ms)</span><input type="number" id="num-fo" class="manual-in" onchange="upd('FO',this.value)"></div>
+                <input type="range" id="rng-fo" min="0" max="255" oninput="upd('FO',this.value)">
+            </div>
+            <button id="saveBrightBtn" class="btn-main" style="background:var(--primary); color:black;" onclick="send('J'+document.getElementById('num-j').value)">ULOŽIT JAS DO EEPROM</button>
+        </div>
+
+        <div class="card">
+            <h2>Speciální dny (S0-S4)</h2>
             <div id="slotEditor"></div>
         </div>
 
         <div class="card">
-            <div style="display: flex; gap: 10px;">
-                <button id="testBtn" class="btn btn-danger" style="margin-top:0; flex:1;" onclick="toggleTest()">TEST</button>
-                <button class="btn" style="background:#4caf50; margin-top:0; flex:1;" onclick="syncTime()">SYNC ČASU</button>
-            </div>
-            <button class="btn btn-danger" style="background:#666" onclick="disconnectAndOff()">UKONČIT A VYPNOUT BT</button>
+            <button id="testBtn" class="btn-main" style="background:var(--accent); color:white;" onclick="toggleTest()">DIAGNOSTICKÝ TEST</button>
+            <button class="btn-main" style="background:#333; color:white;" onclick="disconnectAndOff()">UKONČIT</button>
         </div>
+
+        <div id="log"></div>
     </div>
-    <div id="terminal"></div>
-</div>
 
-<script>
-    let device, characteristic, isTest = false, buffer = "";
-    
-    // Generování slotů
-    const slotEditor = document.getElementById('slotEditor');
-    for(let i=0; i<5; i++) {
-        slotEditor.innerHTML += `
-            <div class="slot-row">
-                <span>Slot <b>S${i}</b>:</span>
-                <input type="text" id="s${i}_input" placeholder="13.08" value="--.--">
-                <button class="btn btn-slot" onclick="saveSlot(${i})">ULOŽIT</button>
-            </div>`;
-    }
+    <script>
+        let device, characteristic, isTest = false, buffer = "";
 
-    async function connect() {
-    try {
-        renderLog("Hledám JDY-33...");
-        
-        // JDY-33 často používá tyto UUID, přidáme je do filtrů
-        device = await navigator.bluetooth.requestDevice({
-            filters: [
-                { namePrefix: 'JDY' },
-                { namePrefix: 'BT' },
-                { services: [0xFFE0] }
-            ],
-            optionalServices: [0xFFE0, 0xFF01, 0xFE00] 
-        });
-
-        renderLog("Připojuji: " + device.name);
-        const server = await device.gatt.connect();
-        
-        renderLog("Hledám služby...");
-        const services = await server.getPrimaryServices();
-        
-        let foundChar = null;
-        for (const service of services) {
-            renderLog("Služba: " + service.uuid);
-            const characteristics = await service.getCharacteristics();
-            for (const c of characteristics) {
-                // JDY-33 komunikuje přes charakteristiku, která umí NOTIFY a WRITE
-                if ((c.properties.notify || c.properties.indicate) && 
-                    (c.properties.write || c.properties.writeWithoutResponse)) {
-                    foundChar = c;
-                    break;
-                }
+        // Inicializace slotů
+        window.onload = () => {
+            const se = document.getElementById('slotEditor');
+            for(let i=0; i<5; i++) {
+                se.innerHTML += `<div class="slot-row"><span>Slot <b>S${i}</b></span><input type="text" id="s${i}_in" placeholder="dd.mm"><button class="btn-main" style="width:50px; margin:0; padding:5px; background:#444; color:white;" onclick="saveSlot(${i})">OK</button></div>`;
             }
-            if (foundChar) break;
+        };
+
+        async function connect() {
+            try {
+                device = await navigator.bluetooth.requestDevice({ filters: [{ services: [0xffe0] }], optionalServices: [0xffe0] });
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(0xffe0);
+                characteristic = (await service.getCharacteristics())[0];
+                await characteristic.startNotifications();
+                characteristic.addEventListener('characteristicvaluechanged', e => {
+                    let text = new TextDecoder().decode(e.target.value);
+                    buffer += text;
+                    if(buffer.includes('\n')) {
+                        let lines = buffer.split('\n');
+                        buffer = lines.pop();
+                        lines.forEach(parseData);
+                    }
+                });
+                document.getElementById('ui').style.display = 'block';
+                document.getElementById('connectBtn').style.display = 'none';
+                setTimeout(() => send('?'), 1000);
+            } catch (e) { alert(e); }
         }
 
-        if (!foundChar) throw new Error("JDY komunikační kanál nenalezen.");
-
-        characteristic = foundChar;
-        await characteristic.startNotifications();
-        
-        characteristic.addEventListener('characteristicvaluechanged', (e) => {
-            let chunk = new TextDecoder().decode(e.target.value);
-            buffer += chunk;
-            if (buffer.includes('\n')) {
-                let lines = buffer.split('\n');
-                buffer = lines.pop();
-                lines.forEach(line => { parseData(line.trim()); renderLog(line.trim()); });
+        function parseData(l) {
+            renderLog(l);
+            // RTC & DATUM
+            if(l.includes("RTC:")) {
+                let d = l.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
+                let t = l.match(/(\d{1,2}:\d{2}:\d{2})/) || l.match(/(\d{1,2}:\d{2})/);
+                if(d) document.getElementById('val-date').innerText = d[1];
+                if(t) document.getElementById('val-rtc').innerText = t[1];
             }
-        });
-
-        document.getElementById('ui').style.display = 'block';
-        document.getElementById('connectBtn').innerText = "ODPOJIT";
-        renderLog("PŘIPOJENO K JDY-33!");
-        setTimeout(() => send('?'), 500);
-
-    } catch (err) {
-        renderLog("CHYBA: " + (err.message || err));
-        console.log(err);
-    }
-}
-
-    // Funkce pro tahání jasu
-    function updateBright(val) {
-        document.getElementById('sv').innerText = val;
-        // Pokud běží TEST, posíláme rovnou číslo pro živou změnu
-        if (isTest) {
-            send(val); 
+            // BATERIE & MODE
+            if(l.includes("Baterie:")) {
+                let v = l.match(/[\d.]+/)[0];
+                document.getElementById('val-bat').innerText = v + " V";
+                document.getElementById('val-mode').innerText = l.includes("ECO") ? "ECO" : "NORMAL";
+                document.getElementById('val-mode').className = l.includes("ECO") ? "status-val eco" : "status-val normal";
+            }
+            // SENZORY
+            if(l.includes("Senzory:")) {
+                document.getElementById('val-sens').innerText = l.includes("V PORADKU") ? "OK" : "CHYBA";
+                document.getElementById('val-sens').className = l.includes("CHYBA") ? "status-val error" : "status-val";
+            }
+            // OKNA (oprava parsování)
+            if(l.includes("Okno 1:")) {
+                let m = l.match(/(\d+)-(\d+)/);
+                if(m) { document.getElementById('h1s').innerText = m[1]; document.getElementById('h1e').innerText = m[2]; }
+            }
+            if(l.includes("Okno 2:")) {
+                let m = l.match(/(\d+)-(\d+)/);
+                if(m) { document.getElementById('h2s').innerText = m[1]; document.getElementById('h2e').innerText = m[2]; }
+            }
+            // PARAMETRY
+            if(l.includes("Jas:")) {
+                let j = l.match(/Jas: (\d+)/)[1];
+                let d = l.match(/Trvani: (\d+)/)[1];
+                sync('j', j); sync('d', d);
+            }
+            if(l.includes("Fade IN:")) {
+                let fi = l.match(/Fade IN: (\d+)/)[1];
+                let fo = l.match(/Fade OUT: (\d+)/)[1];
+                sync('fi', fi); sync('fo', fo);
+            }
+            // SPECIAL DAYS (oprava parsování)
+            let sm = l.match(/S(\d):\s*(\d+)\.(\d+)/);
+            if(sm) {
+                let val = sm[2].padStart(2,'0') + "." + sm[3].padStart(2,'0');
+                document.getElementById(`s${sm[1]}_in`).value = (val === "00.00") ? "" : val;
+            }
+            if(l.includes("TEST UKONCEN") || l.includes("testok")) { isTest = false; updateTestUI(); }
         }
-    }
 
-    async function disconnectAndOff() {
-        if (confirm("Ukončit a vypnout Bluetooth na hrobě?")) {
-            if (isTest) await send('testok');
-            await send('X');
-            setTimeout(() => { location.reload(); }, 600);
+        function sync(id, v) {
+            document.getElementById('rng-'+id).value = v;
+            document.getElementById('num-'+id).value = v;
         }
-    }
 
-    function parseData(l) {
-        if (!l) return;
+        function upd(key, val) {
+            sync(key.toLowerCase(), val);
+            if(isTest && key === 'J') send(val);
+            else send(key + val);
+        }
 
-        // Detekce ukončení testu Arduinem (timeout 60s)
-        if (l.includes("testok") || l.includes("TEST UKONCEN")) {
-            isTest = false;
+        function adj(id, v) {
+            let el = document.getElementById(id);
+            let cur = (parseInt(el.innerText) + v + 24) % 24;
+            el.innerText = cur;
+        }
+
+        function saveWindows() {
+            let h1s = document.getElementById('h1s').innerText.padStart(2,'0');
+            let h1e = document.getElementById('h1e').innerText.padStart(2,'0');
+            let h2s = document.getElementById('h2s').innerText.padStart(2,'0');
+            let h2e = document.getElementById('h2e').innerText.padStart(2,'0');
+            send(`H${h1s}${h1e}${h2s}${h2e}`);
+            setTimeout(()=>send('?'), 1200);
+        }
+
+        function syncTime() {
+            const n = new Date();
+            // OPRAVA: Arduino substring očekává fixní formát "T YYYY-MM-DD HH:MM"
+            const Y = n.getFullYear();
+            const M = String(n.getMonth()+1).padStart(2,'0');
+            const D = String(n.getDate()).padStart(2,'0');
+            const H = String(n.getHours()).padStart(2,'0');
+            const m = String(n.getMinutes()).padStart(2,'0');
+            const cmd = `T ${Y}-${M}-${D} ${H}:${m}`;
+            send(cmd);
+            setTimeout(()=>send('?'), 1500);
+        }
+
+        function saveSlot(i) {
+            let v = document.getElementById(`s${i}_in`).value;
+            let p = v.split('.');
+            if(p.length === 2) { send(`S${i} ${p[0]} ${p[1]}`); setTimeout(()=>send('?'), 1200); }
+        }
+
+        function toggleTest() {
+            isTest = !isTest;
+            send(isTest ? 'test' : 'testok');
             updateTestUI();
-            renderLog("Test ukončen (vypršel čas)");
         }
 
-        if (l.includes("Baterie:")) { 
-            let m = l.match(/[\d.]+/); 
-            if(m) document.getElementById('valBat').innerText = m[0] + " V";
+        function updateTestUI() {
+            const btn = document.getElementById('testBtn');
+            btn.innerText = isTest ? "STOP TEST" : "DIAGNOSTICKÝ TEST";
+            btn.style.background = isTest ? "#555" : "var(--accent)";
+            document.getElementById('jasLabel').innerText = isTest ? "ŽIVÝ JAS (TEST)" : "LED Nastavení";
+            document.getElementById('jasLabel').style.color = isTest ? "var(--accent)" : "var(--primary)";
         }
-        if (l.includes("RTC:")) { 
-            let dMatch = l.match(/(\d{1,2}\.\d{1,2}\.\d{4})/);
-            if(dMatch) document.getElementById('valDate').innerText = dMatch[1];
-            let tMatch = l.match(/(\d{1,2}:\d{2})/);
-            if(tMatch) document.getElementById('valTime').innerText = tMatch[1];
+
+        function send(c) {
+            if(!characteristic) return;
+            renderLog("> " + c);
+            characteristic.writeValue(new TextEncoder().encode(c + "\n"));
         }
-        if (l.includes("Okno 1")) {
-            let m = l.match(/(\d+-\d+)/);
-            if(m) document.getElementById('valH1').innerText = m[1];
+
+        function disconnectAndOff() {
+            if(confirm("Ukončit?")) { send('testok'); setTimeout(()=>send('X'), 200); setTimeout(()=>location.reload(), 600); }
         }
-        if (l.includes("Okno 2")) {
-            let m = l.match(/(\d+-\d+)/);
-            if(m) document.getElementById('valH2').innerText = m[1];
+
+        function renderLog(m) {
+            const l = document.getElementById('log');
+            l.innerHTML += m + "<br>";
+            l.scrollTop = l.scrollHeight;
         }
-        let slotMatch = l.match(/S(\d):\s*([\d.-]+)\.([\d.-]+)/);
-        if (slotMatch) {
-            let idx = slotMatch[1];
-            let d = slotMatch[2];
-            let m = slotMatch[3];
-            let input = document.getElementById(`s${idx}_input`);
-            input.value = (d === "--" || d === "0" || d === "-1") ? "00.00" : d.padStart(2, '0') + "." + m.padStart(2, '0');
-        }
-    }
-
-    function updateTestUI() {
-        const btn = document.getElementById('testBtn');
-        const label = document.getElementById('jasLabel');
-        const saveBtn = document.getElementById('saveBrightBtn');
-
-        if (isTest) {
-            btn.innerText = "STOP TEST";
-            btn.style.background = "#555";
-            label.innerText = "ŽIVÝ JAS (TEST MÓD)";
-            label.style.color = "var(--accent)";
-            saveBtn.style.display = "none";
-        } else {
-            btn.innerText = "TEST";
-            btn.style.background = "var(--accent)";
-            label.innerText = "MAXIMÁLNÍ JAS (EEPROM)";
-            label.style.color = "var(--primary)";
-            saveBtn.style.display = "block";
-        }
-    }
-
-    function toggleTest() {
-        isTest = !isTest;
-        send(isTest ? 'test' : 'testok');
-        updateTestUI();
-    }
-
-    async function saveSlot(idx) {
-        let val = document.getElementById(`s${idx}_input`).value.trim();
-        let parts = val.split(/[.\s,]+/).filter(p => p.length > 0);
-        if (parts.length < 2) return;
-        let d = parts[0].padStart(2, '0');
-        let m = parts[1].padStart(2, '0');
-        await send(`S${idx} ${d} ${m}`);
-        setTimeout(() => send('?'), 1200);
-    }
-
-    async function send(msg) {
-        if (!characteristic) return;
-        let data = new TextEncoder().encode(msg + "\n");
-        try { await characteristic.writeValueWithResponse(data); } 
-        catch (e) { await characteristic.writeValueWithoutResponse(data); }
-    }
-
-    function renderLog(msg) {
-        let d = document.createElement('div');
-        d.innerText = "> " + msg;
-        let t = document.getElementById('terminal');
-        t.appendChild(d); t.scrollTop = t.scrollHeight;
-    }
-
-    function syncTime() {
-        const d = new Date();
-        const cmd = `T ${d.getFullYear()} ${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')} ${String(d.getMinutes()).padStart(2,'0')}`;
-        renderLog("Sync: " + cmd);
-        send(cmd);
-        setTimeout(() => send('?'), 1200);
-    }
-</script>
+    </script>
 </body>
 </html>
